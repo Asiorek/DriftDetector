@@ -1,0 +1,21 @@
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+/.idea/vcs.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+
+*.iml
+.gradle
+/local.properties
+/build
+.idea
+
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
