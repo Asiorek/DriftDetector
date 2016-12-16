@@ -23,24 +23,15 @@
         android:id="@+id/button_start"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="145dp" />
+        android:layout_marginBottom="200dp" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="INPUT"
-        android:id="@+id/button_input"
+        android:text="STOP"
+        android:id="@+id/button_stop"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="100dp" />
-
-    <Button
-        android:text="READ"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/button_start"
-        android:layout_alignLeft="@+id/button_start"
-        android:layout_alignStart="@+id/button_start"
-        android:id="@+id/button_read" />
 
 </RelativeLayout>
