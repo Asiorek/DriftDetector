@@ -1,0 +1,12 @@
+apply plugin: 'java'
+
+dependencies{
+    compile group: 'com.kenai.nbpwr', name: 'org-jdesktop-swingx', version: '1.6-201002261215'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.22'
+}
+
+//compileOptions {
+//    sourceCompatibility JavaVersion.VERSION_1_8
+//    targetCompatibility JavaVersion.VERSION_1_8
+//}
+

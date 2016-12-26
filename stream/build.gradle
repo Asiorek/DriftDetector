@@ -1,0 +1,19 @@
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile project(':math')
+
+    compile files('libs/core.jar')
+    compile files('libs/data.jar')
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    compile group: 'log4j', name: 'log4j', version: '1.2.17'
+
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.5'
+
+    compile group: 'org.json', name: 'json', version: '20160810'
+}

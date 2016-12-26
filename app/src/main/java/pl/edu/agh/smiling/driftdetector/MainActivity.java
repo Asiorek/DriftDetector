@@ -19,9 +19,12 @@ import org.kaazing.net.sse.SseEventType;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.ParseException;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import smile.classification.DriftDetector;
+
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class MainActivity extends AppCompatActivity {
 
@@ -29,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
 
     @BindView(R.id.text_from_server)
     TextView textView;
+    @BindView(R.id.textViewNumberOfDrifts)
+    TextView textViewNumberOfDrifts;
 
     @BindView(R.id.button_stop)
     Button buttonStop;
@@ -41,9 +46,12 @@ public class MainActivity extends AppCompatActivity {
 
     private AsyncTask asyncTask;
 
-//    private DriftDetector driftDetector;
+    private DriftDetector driftDetector;
 
-//    int classIndex = -1;
+    int iterator = 0;
+
+    boolean driftDetected = false;
+    private int numberOfDrifts = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,23 +62,13 @@ public class MainActivity extends AppCompatActivity {
 
         textView = (TextView) findViewById(R.id.text_from_server);
 
-        //TODO: Enable streaming from various sources
-//        driftDetector = DriftDetector.getInstance(100, "knn");
 
-        buttonStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                //TODO: Check if there is internet connection
-                asyncTask = new HttpRequest().execute(host);
-            }
+        buttonStart.setOnClickListener(view -> {
+            //TODO: Check if there is internet connection
+            asyncTask = new HttpRequest().execute(host);
         });
 
-        buttonStop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                asyncTask.cancel(true);
-            }
-        });
+        buttonStop.setOnClickListener(view -> asyncTask.cancel(true));
     }
 
     public class HttpRequest extends AsyncTask<String, String, Void> {
@@ -84,11 +82,6 @@ public class MainActivity extends AppCompatActivity {
                 final SseEventReader sseEventReader = sseEventSource.getEventReader();
 
                 SseEventType type = sseEventReader.next();
-                int iterator = 0;
-
-//                DriftDetector driftDetector = DriftDetector.getInstance(3, "knn");
-
-//                driftDetector.isDriftDetected();
 
                 while (type != SseEventType.EOS) {
 
@@ -96,23 +89,41 @@ public class MainActivity extends AppCompatActivity {
                     if (type != null && type.equals(SseEventType.DATA)) {
                         CharSequence data = sseEventReader.getData();
 
-                        //TODO: Parse data to Attribute in smiling.
-                        //TODO: Send new item to DriftDetector method and show when concept drift occurs
-//                        driftDetector.update(data.toString(), classIndex, iterator++);
-                        publishProgress(data.toString());
                         Log.d(TAG, "onClick: " + data.toString());
+
+                        if (iterator == 0) {
+                            Log.d(TAG, "doInBackground: Drift Detector started!");
+                            //Initialize Drift Detector for the first element
+                            driftDetector = DriftDetector.getInstance(200, "knn", data.toString());
+                        } else {
+                            Log.d(TAG, "doInBackground: Drift Detector Update!");
+                            if (driftDetected) {
+                                //check if drift is detected and update a TextView with number od drifts
+                                ++numberOfDrifts;
+                                Toast.makeText(MainActivity.this, "DRIFT DETECTED on " + iterator, Toast.LENGTH_SHORT).show();
+                                Log.d(TAG, "doInBackground: DRIFT DETECTED on " + iterator);
+                                driftDetected = false;
+                            }else{
+                                //update drift detector
+                                driftDetected = driftDetector.update(data.toString(), 0, iterator);
+                            }
+                        }
+                        publishProgress(new String[]{data.toString(), String.valueOf(driftDetector.getNumberOfDrifts())});
+                        iterator++;
                     } else {
                         Log.d(TAG, "onClick: type null or not data: " + type);
-                        publishProgress("empty");
+                        publishProgress("empty", String.valueOf(numberOfDrifts));
                     }
                     type = sseEventReader.next();
-                    Thread.sleep(300);
+//                    Thread.sleep(20);
                 }
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
-            } catch (InterruptedException e) {
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+            } catch (ParseException e) {
                 e.printStackTrace();
             }
             return null;
@@ -121,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onProgressUpdate(String... data) {
             textView.setText(data[0]);
+            textViewNumberOfDrifts.setText(data[1]);
             super.onProgressUpdate(data);
         }
 
