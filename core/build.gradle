@@ -1,0 +1,7 @@
+apply plugin: 'java'
+
+dependencies {
+    compile project(':graph'), project(':math'), project(':data')
+
+    compile group: 'log4j', name: 'log4j', version: '1.2.17'
+}

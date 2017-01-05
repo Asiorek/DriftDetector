@@ -129,11 +129,11 @@ public class DriftDetector {
 
         //init first window
         if (elementNumber == maxWindowSize) {
-            addDataToWindowAndTrainModel(classifierName, maxWindowSize - 1, 2, 3);
+            addElementToWindowAndTrainModel(classifierName, maxWindowSize - 1, 2, 3);
             System.out.println("Create a window");
         } else if (elementNumber > maxWindowSize) { //when window is initialized
 
-            int i = addToWindowCheckTheModelIfDriftReturnWarningIndex(datum.x, (int) datum.y, elementNumber, 2, 3);
+            int i = addElementToWindowCheckTheModelIfDriftDetectedReturnWarningIndex(datum.x, (int) datum.y, elementNumber, 2, 3);
             System.out.println("i from update is: " + i + " while elementNumber: " + elementNumber);
 
             if (driftDetected) {
@@ -152,7 +152,7 @@ public class DriftDetector {
         return driftDetected;
     }
 
-    private void addDataToWindowAndTrainModel(String classifierName, int maxWindowSize, int alpha, int beta) {
+    private void addElementToWindowAndTrainModel(String classifierName, int maxWindowSize, int alpha, int beta) {
 
         double[][] x = attributeDataset.toArray(new double[0][]);
         int[] y = attributeDataset.toArray(new int[0]);
@@ -179,7 +179,7 @@ public class DriftDetector {
         }
     }
 
-    private int addToWindowCheckTheModelIfDriftReturnWarningIndex(double[] x, int y, int i, int alpha, int beta) {
+    private int addElementToWindowCheckTheModelIfDriftDetectedReturnWarningIndex(double[] x, int y, int i, int alpha, int beta) {
 
         System.out.println("***" + i + "***");
 

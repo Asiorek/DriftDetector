@@ -1,1 +1,1 @@
-include ':app', ':math', ':stream'
+include ':app', ':math', ':stream', ':data', ':core', ':graph'

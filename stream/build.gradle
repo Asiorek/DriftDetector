@@ -5,10 +5,8 @@ repositories {
 }
 
 dependencies {
-    compile project(':math')
+    compile project(':math'), project(':data'), project(':core')
 
-    compile files('libs/core.jar')
-    compile files('libs/data.jar')
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
     compile group: 'log4j', name: 'log4j', version: '1.2.17'
