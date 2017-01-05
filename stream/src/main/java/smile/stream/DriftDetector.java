@@ -1,14 +1,19 @@
-package smile.classification;
+package smile.stream;
 
 import org.json.JSONObject;
+
+import smile.classification.Classifier;
+import smile.classification.DecisionTree;
+import smile.classification.KNN;
 import smile.data.*;
 
 import java.text.ParseException;
 import java.util.Iterator;
 
 /**
- * Created by joanna on 10/25/16.
- * Class which implements Drift Detector Method algorithm
+ * @author joanna
+ *         Implementation of Drift Detector Method algorithm with Sliding Window techniques
+ * @since 10/25/16
  */
 public class DriftDetector {
 
@@ -33,19 +38,6 @@ public class DriftDetector {
     private Attribute[] attributes;
     private Attribute response;
 
-    private DriftDetector(int maxWindowSize, String method) {
-        this.maxWindowSize = maxWindowSize;
-        this.classifierName = method;
-        this.classifier = trainModel(window, classifierName);
-    }
-
-    private DriftDetector(int maxWindowSize, String method, Window window) {
-        this.maxWindowSize = maxWindowSize;
-        this.classifierName = method;
-        this.window = window;
-        this.classifier = trainModel(window, classifierName);
-    }
-
     private DriftDetector(int maxWindowSize, String method, JSONObject jsonObj) {
         this.maxWindowSize = maxWindowSize;
         this.classifierName = method;
@@ -66,30 +58,9 @@ public class DriftDetector {
         attributeDataset = new AttributeDataset("dataset_name", attributes, response);
     }
 
-    public static DriftDetector getInstance(int maxWindowSize, String classifierName) {
-        if (instance == null) {
-            instance = new DriftDetector(maxWindowSize, classifierName);
-        }
-        return instance;
-    }
-
-    public static DriftDetector getInstance(int maxWindowSize, String classifierName, Window window) {
-        if (instance == null) {
-            instance = new DriftDetector(maxWindowSize, classifierName, window);
-        }
-        return instance;
-    }
-
     public static DriftDetector getInstance(int maxWindowSize, String classifierName, String data) {
         if (instance == null) {
             JSONObject jsonObj = new JSONObject(data.toString());
-            instance = new DriftDetector(maxWindowSize, classifierName, jsonObj);
-        }
-        return instance;
-    }
-
-    public static DriftDetector getInstance(int maxWindowSize, String classifierName, JSONObject jsonObj) {
-        if (instance == null) {
             instance = new DriftDetector(maxWindowSize, classifierName, jsonObj);
         }
         return instance;
@@ -124,8 +95,6 @@ public class DriftDetector {
         for (int l = 0, k = 0; l < strings.length; l++) {
             if (l == classIndex) {
                 y = response.valueOf(strings[l]);
-//            } else if (missing != null && missing.equalsIgnoreCase(s[i])) {
-//                x[k++] = Double.NaN;
                 System.out.println("y: " + y);
             } else {
                 if (attributes[k] != null) {
@@ -143,6 +112,14 @@ public class DriftDetector {
         return datum;
     }
 
+    /**
+     * Methods for test-then-train current classifier
+     * @param data a {@code String} data of JSON example form dataset
+     * @param classIndex a {@code int} index of a class in data
+     * @param elementNumber a {@code int} of the number of the element
+     * @return {@code true} if dirft is detected, otherwise {@code false}
+     * @throws ParseException
+     */
     public boolean update(String data, int classIndex, int elementNumber) throws ParseException {
 
         //add element from stream to attributes
@@ -159,11 +136,11 @@ public class DriftDetector {
             int i = addToWindowCheckTheModelIfDriftReturnWarningIndex(datum.x, (int) datum.y, elementNumber, 2, 3);
             System.out.println("i from update is: " + i + " while elementNumber: " + elementNumber);
 
-            if(driftDetected) {
-                int diffBetweenDriftAndWarningIndex = elementNumber-i;
-                if(diffBetweenDriftAndWarningIndex < maxWindowSize){
-                    for(int j = maxWindowSize - diffBetweenDriftAndWarningIndex; j < maxWindowSize-1; j++){
-                        updateWindow(window.getX()[j], window.getY()[j]);
+            if (driftDetected) {
+                int diffBetweenDriftAndWarningIndex = elementNumber - i;
+                if (diffBetweenDriftAndWarningIndex < maxWindowSize) {
+                    for (int j = maxWindowSize - diffBetweenDriftAndWarningIndex; j < maxWindowSize - 1; j++) {
+                        addElementToWindow(window.getX(j), window.getY(j));
                     }
                 }
                 ++numberOfDrifts;
@@ -175,7 +152,7 @@ public class DriftDetector {
         return driftDetected;
     }
 
-    public void addDataToWindowAndTrainModel(String classifierName, int maxWindowSize, int alpha, int beta) {
+    private void addDataToWindowAndTrainModel(String classifierName, int maxWindowSize, int alpha, int beta) {
 
         double[][] x = attributeDataset.toArray(new double[0][]);
         int[] y = attributeDataset.toArray(new int[0]);
@@ -193,75 +170,33 @@ public class DriftDetector {
         System.out.println("Model is trained.");
     }
 
-    public int update(double[] x, int y, int i, int alpha, int beta) {
-//TODO: Entropy
-        //fill the window with the data to avoid NullPointerException
-        if (window.getSize() < maxWindowSize) {
-            window.add(x, y);
-            return ++i;
-        } else {
-            if (driftDetected) {
-                numberOfDrifts++;
-
-                window.clear();
-
-                i = warningIndex;
-
-                initialize();
-
-                return i;
-            } else {
-                System.out.println("***" + i + "***");
-
-                //add an element to window
-                if (window != null) {
-                    window.add(x, y);
-                    System.out.print("Added do window: ");
-                    printValue(x, y);
-                }
-
-                //test model
-                testModel(window, classifier, i, alpha, beta);
-
-                //update model
-                classifier = trainModel(window, classifierName);
-
-                return ++i;
-            }
-        }
-    }
-
-    public void updateWindow(double[] x, int y){
+    private void addElementToWindow(double[] x, int y) {
         //add an element to window
         if (window != null) {
             window.add(x, y);
-            System.out.print("Update window with: ");
+            System.out.print("Added to window: ");
             printValue(x, y);
         }
     }
 
-    public int addToWindowCheckTheModelIfDriftReturnWarningIndex(double[] x, int y, int i, int alpha, int beta) {
+    private int addToWindowCheckTheModelIfDriftReturnWarningIndex(double[] x, int y, int i, int alpha, int beta) {
 
-                System.out.println("***" + i + "***");
+        System.out.println("***" + i + "***");
 
-                //add an element to window
-                if (window != null) {
-                    window.add(x, y);
-                    System.out.print("Added do window: ");
-                    printValue(x, y);
-                }
+        //add an element to window
+        addElementToWindow(x,y);
 
-                //test model
-                int driftIndex = testModel(window, classifier, i, alpha, beta);
+        //test model
+        int driftIndex = testModel(window, classifier, i, alpha, beta);
 
-                if(driftIndex != -1){
-                    return warningIndex;
-                }else {
-                    //update model
-                    classifier = trainModel(window, classifierName);
+        if (driftIndex != -1) {
+            return warningIndex;
+        } else {
+            //update model
+            classifier = trainModel(window, classifierName);
 
-                    return i;
-                }
+            return i;
+        }
     }
 
     private Classifier trainModel(Window window, String algorithmType) throws IllegalArgumentException {
@@ -295,7 +230,6 @@ public class DriftDetector {
         minSum = Double.MAX_VALUE;
         minProbability = (Double.MAX_VALUE / 2) - 1;
         minDeviation = (Double.MAX_VALUE / 2) - 1;
-
     }
 
     private int testModel(Window window, Classifier classifier, int iterator, int alpha, int beta) {
@@ -311,10 +245,13 @@ public class DriftDetector {
 
         System.out.println("Errors: " + error);
 
+        return checkDrift(error, iterator, alpha, beta);
+    }
+
+    private int checkDrift(int error, int iterator, int alpha, int beta){
         currentProbability = (double) error / window.getSize();
 
         currentStandardDeviation = Math.sqrt((currentProbability * (1 - currentProbability)) / window.getSize());
-
 
         System.out.format("Probability: %.5f%%%n", currentProbability * 100.0);
         System.out.format("Deviation: %.5f%%%n", currentStandardDeviation);
@@ -355,19 +292,10 @@ public class DriftDetector {
         return driftIndex;
     }
 
-    public void printValue(double[] x, int y, int i) {
-        System.out.print(i + " Attributes: ");
+    private void printValue(double[] x, int y) {
         for (double element : x) {
             System.out.print(element + " ");
         }
         System.out.println("Class: " + y);
     }
-
-    public void printValue(double[] x, int y) {
-        for (double element : x) {
-            System.out.print(element + " ");
-        }
-        System.out.println("Class: " + y);
-    }
-
 }

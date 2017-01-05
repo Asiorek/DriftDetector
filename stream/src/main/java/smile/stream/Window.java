@@ -1,23 +1,22 @@
-package smile.classification;
+package smile.stream;
 
 import smile.math.DoubleArrayList;
 
 import java.util.LinkedList;
 
 /**
- * Created by joanna on 11/14/16.
- * Window is a class, which gather data to process by the Drift Detection Method
+ * @author joanna
+ * {@link Window} is an implementation of Sliding Windows, which gather data to be processed by the Drift Detection Method
  */
 public class Window {
 
     private static Window instance = null;
-    private static int maxSize;
+    private int maxSize;
     private LinkedList<DoubleArrayList> fifoX;
     private LinkedList<Integer> fifoY;
-    private int entropy;
 
     private Window(int maxWindowSize) {
-        maxSize = maxWindowSize;
+        this.maxSize = maxWindowSize;
         this.fifoX = new LinkedList<>();
         this.fifoY = new LinkedList<>();
     }
@@ -25,13 +24,6 @@ public class Window {
     public static Window getInstance(int maxWindowSize) {
         if (instance == null) {
             instance = new Window(maxWindowSize);
-        }
-        return instance;
-    }
-
-    public static Window getInstance() {
-        if (instance == null) {
-            instance = new Window(maxSize);
         }
         return instance;
     }
@@ -59,20 +51,12 @@ public class Window {
         return result;
     }
 
-    private LinkedList<DoubleArrayList> getFifoX() {
-        return fifoX;
-    }
-
-    private LinkedList<Integer> getFifoY() {
-        return fifoY;
-    }
-
     /**
      * Get the attributes
      *
-     * @return double[][]
+     * @return {@code double[][]}
      */
-    double[][] getX() {
+    public double[][] getX() {
         double[][] primitives = new double[fifoX.size()][fifoX.get(0).size()];
         for (int i = 0; i < fifoX.size() - 1; i++) {
             for (int j = 0; j < fifoX.get(i).size() - 1; j++) {
@@ -83,11 +67,20 @@ public class Window {
     }
 
     /**
+     * Get the i-th attributes from the {@link Window}
+     * @param i the number of the row
+     * @return i-th {@code double[]} of attributes
+     */
+    public double[] getX(int i) {
+        return fifoX.get(i).toArray();
+    }
+
+    /**
      * Get the classes
      *
-     * @return int[]
+     * @return {@code int[]}
      */
-    int[] getY() {
+    public int[] getY() {
         Integer[] integers = new Integer[fifoY.size()];
         for (int i = 0; i < fifoY.size(); i++) {
             integers[i] = fifoY.get(i);
@@ -97,12 +90,21 @@ public class Window {
     }
 
     /**
-     * Add new element to window.
+     * Get the i-th class from the {@link Window}
+     * @param i the number of the row
+     * @return an i-th {@code int} of class
+     */
+    public int getY(int i) {
+        return fifoY.get(i);
+    }
+
+    /**
+     * Add new element to {@link Window}
      *
      * @param xElement attributes
      * @param yElement class
      */
-    void add(double[] xElement, int yElement) {
+    public void add(double[] xElement, int yElement) {
         if (fifoX.size() == maxSize) {
             fifoX.removeFirst();
             fifoY.removeFirst();
@@ -114,7 +116,7 @@ public class Window {
     /**
      * Clear the window by removing all data.
      */
-    void clear() {
+    public void clear() {
         for (int i = 0; i < fifoY.size(); i++) {
             fifoY.remove();
             fifoX.remove();
@@ -122,24 +124,12 @@ public class Window {
     }
 
     /**
-     * Change the current window into new window,
-     *
-     * @param newWindow new window with possible values
+     * Return the current size of Window with data,
+     * @return {@code int}, which indicates current Window's size
      */
-    void changeInto(Window newWindow) {
-        fifoX = newWindow.getFifoX();
-        fifoY = newWindow.getFifoY();
-    }
-
-    /**
-     * Return the current size of the window with data,
-     */
-    int getSize() {
+    public int getSize() {
         return fifoX.size() == fifoY.size() ? fifoX.size() : 0;
     }
 
-    public int getEntropy() {
-        return entropy;
-    }
 }
 

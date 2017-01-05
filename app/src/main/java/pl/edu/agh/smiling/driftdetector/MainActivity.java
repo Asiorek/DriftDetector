@@ -7,7 +7,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,13 +23,21 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import smile.classification.DriftDetector;
+import okhttp3.ResponseBody;
+import pl.edu.agh.smiling.driftdetector.rest.ServiceGenerator;
+import pl.edu.agh.smiling.driftdetector.rest.SmilingClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import smile.stream.DriftDetector;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -35,13 +46,20 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.textViewNumberOfDrifts)
     TextView textViewNumberOfDrifts;
 
+    @BindView(R.id.spinner)
+    Spinner spinner;
+
     @BindView(R.id.button_stop)
     Button buttonStop;
     @BindView(R.id.button_start)
     Button buttonStart;
 
+    @BindView(R.id.button_dataset)
+    Button buttonDataset;
+
     //TODO: set localhost
-    private final String host = "http://192.168.43.203:5000/subscribe";
+    private final static String host = "http://192.168.43.203:5000/";
+    private final static String startStream = "subscribe";
     private SseEventSource sseEventSource;
 
     private AsyncTask asyncTask;
@@ -60,15 +78,69 @@ public class MainActivity extends AppCompatActivity {
 
         ButterKnife.bind(this);
 
-        textView = (TextView) findViewById(R.id.text_from_server);
+        spinner.setOnItemSelectedListener(this);
 
+        List<String> datasets = new ArrayList<>();
+        datasets.add("1CDT");
+        datasets.add("5CVT");
+        datasets.add("SEA");
+        datasets.add("Airlines");
+        datasets.add("Electricity");
+        datasets.add("TalkingMobile");
 
-        buttonStart.setOnClickListener(view -> {
-            //TODO: Check if there is internet connection
-            asyncTask = new HttpRequest().execute(host);
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, datasets);
+
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        spinner.setAdapter(dataAdapter);
+
+        buttonDataset.setOnClickListener(view -> {
+            SmilingClient client = ServiceGenerator.getClient();
+
+            String filename = spinner.getSelectedItem().toString().toLowerCase() + ".csv";
+            Call<ResponseBody> call = client.chooseDataset(filename);
+
+            call.enqueue(new Callback<ResponseBody>() {
+                @Override
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                    if (response.isSuccessful()) {
+                        Log.d(TAG, "onResponse: SUCCESS: " + response.body());
+                        Toast.makeText(getApplication(), response.message() , Toast.LENGTH_LONG).show();
+                    } else {
+                        Log.d(TAG, "onResponse: FAILURE");
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+                    Log.d(TAG, "onFailure: " + t);
+                }
+            });
         });
 
-        buttonStop.setOnClickListener(view -> asyncTask.cancel(true));
+        buttonStart.setOnClickListener(view -> {
+            String uri = host + startStream;
+            Log.d(TAG, "onCreate: URI: " + uri);
+            buttonDataset.setVisibility(View.GONE);
+            asyncTask = new HttpRequest().execute(uri);
+        });
+
+        buttonStop.setOnClickListener(view -> {
+            buttonDataset.setVisibility(View.VISIBLE);
+            asyncTask.cancel(true);
+        });
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        String item = parent.getItemAtPosition(position).toString();
+
+        Toast.makeText(parent.getContext(), "Selected dataset: " + item, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
     }
 
     public class HttpRequest extends AsyncTask<String, String, Void> {
@@ -103,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
                                 Toast.makeText(MainActivity.this, "DRIFT DETECTED on " + iterator, Toast.LENGTH_SHORT).show();
                                 Log.d(TAG, "doInBackground: DRIFT DETECTED on " + iterator);
                                 driftDetected = false;
-                            }else{
+                            } else {
                                 //update drift detector
                                 driftDetected = driftDetector.update(data.toString(), 0, iterator);
                             }
